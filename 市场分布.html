@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全球草坪草种生态与重点战略市场智能看板 V2.5</title>
+    <!-- Tailwind CSS 自动化布局框架 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet 专业地图引擎 CSS 与 JS CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        /* 科技感滚动条自定义 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+        
+        /* 核心战略市场：雷达动态发光粒子锚点样式 */
+        .pulse-marker-target {
+            width: 16px !important;
+            height: 16px !important;
+            background: #f59e0b; 
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 15px #f59e0b;
+            position: relative;
+        }
+        .pulse-marker-target::after {
+            content: '';
+            position: absolute;
+            top: -12px; left: -12px; right: -12px; bottom: -12px;
+            border: 2px solid #f59e0b;
+            border-radius: 50%;
+            opacity: 0;
+            animation: radar-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        @keyframes radar-ping {
+            0% { transform: scale(0.4); opacity: 1; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        /* Leaflet 地图弹窗自定义高科技深色样式 */
+        .leaflet-popup-content-wrapper {
+            background: #0f172a !important;
+            color: #f8fafc !important;
+            border: 1px solid #3b82f6 !important;
+            border-radius: 0.5rem !important;
+        }
+        .leaflet-popup-tip { background: #0f172a !important; border: 1px solid #3b82f6 !important; }
+    </style>
+</head>
+<body class="bg-gray-950 text-slate-100 min-h-screen font-sans flex flex-col overflow-x-hidden">
+
+    <!-- TOP HEADER / 智能顶部状态栏 -->
+    <header class="bg-gray-900 border-b border-gray-800 px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-lg gap-4 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="h-3 w-3 rounded-full bg-emerald-500 animate-pulse"></div>
+            <h1 class="text-xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400">
+                GLOBAL TURFGRASS INTELLIGENCE DASHBOARD
+            </h1>
+            <span class="text-xs bg-gray-800 text-slate-400 border border-gray-700 px-2 py-0.5 rounded uppercase font-mono hidden sm:inline">V2.5 Enterprise</span>
+        </div>
+        <div class="flex items-center gap-6 font-mono text-sm text-slate-400">
+            <div>SYSTEM: <span class="text-emerald-400">ONLINE</span></div>
+            <div id="digital-clock">UTC 00:00:00</div>
+        </div>
+    </header>
+
+    <!-- MAIN COCKPIT LAYOUT / 主驾驶舱布局 -->
+    <main class="flex-1 p-4 grid grid-cols-1 xl:grid-cols-4 gap-4 overflow-hidden min-h-[550px]">
+        
+        <!-- LEFT PANEL: FOCUS MARKETS / 左侧：重点未来战略市场控制器 -->
+        <section class="xl:col-span-1 bg-gray-900/60 border border-gray-800 rounded-xl p-4 flex flex-col shadow-inner backdrop-blur h-[75vh] xl:h-auto">
+            <div class="mb-3">
+                <h2 class="text-sm font-semibold text-cyan-400 uppercase tracking-widest flex items-center gap-2">
+                    🎯 核心未来市场 (9国)
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">点击启动全球非重复定位与区域生态调取</p>
+            </div>
+            
+            <!-- 国家选择列表（已支持平滑滚动） -->
+            <div class="space-y-2 overflow-y-auto flex-1 pr-1" id="market-list">
+                <!-- 由 JavaScript 动态渲染 -->
+            </div>
+        </section>
+
+        <!-- CENTER PANEL: STANDARD WORLD MAP / 中间：唯一不重复标准数字地图 -->
+        <section class="xl:col-span-2 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-2xl flex flex-col relative group min-h-[400px]">
+            <!-- 地图容器 -->
+            <div id="map" class="w-full h-full z-10 bg-gray-950"></div>
+            
+            <!-- 地图浮动提示 -->
+            <div class="absolute bottom-3 left-3 z-20 bg-gray-950/80 border border-gray-800 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-400 pointer-events-none backdrop-blur">
+                PROJECTION: UNIQUE BOUNDED FLAT MAP (NO REPEAT)
+            </div>
+        </section>
+
+        <!-- RIGHT PANEL: REAL-TIME DATA STREAM / 右侧：聚焦市场深度分析终端 -->
+        <section class="xl:col-span-1 bg-gray-900/60 border border-gray-800 rounded-xl p-4 flex flex-col shadow-inner backdrop-blur justify-between h-[85vh] xl:h-auto overflow-y-auto">
+            <div class="space-y-3.5">
+                <div class="border-b border-gray-800 pb-2">
+                    <span class="text-xs font-mono text-amber-500 tracking-wider font-bold">● CURRENT STRATEGIC REGION</span>
+                    <h2 class="text-lg font-bold text-slate-100 mt-0.5" id="focus-title">加载中...</h2>
+                </div>
+                
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <span class="block text-xs font-mono text-slate-500 mb-1">战略级别 / STRATEGIC LEVEL</span>
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 font-semibold text-xs" id="focus-status">
+                            -
+                        </div>
+                    </div>
+                    
+                    <!-- 🌟 精细化：主要细分地区分布 -->
+                    <div>
+                        <span class="block text-xs font-mono text-cyan-400 mb-1 font-bold">📍 核心细分区域 / KEY REGIONS</span>
+                        <div class="text-emerald-400 font-medium bg-emerald-950/30 border border-emerald-900/40 p-2.5 rounded-lg text-xs leading-relaxed" id="focus-regions">
+                            -
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="block text-xs font-mono text-slate-500 mb-1">草种生态分布 / TURFGRASS ECOSYSTEM</span>
+                        <p class="text-slate-300 text-xs leading-relaxed bg-gray-950/50 border border-gray-800/60 p-2.5 rounded-lg" id="focus-turf">
+                            -
+                        </p>
+                    </div>
+
+                    <div>
+                        <span class="block text-xs font-mono text-slate-500 mb-1">商业特征与管养前景 / COMMERCIAL & AUTOMATION</span>
+                        <p class="text-slate-300 text-xs leading-relaxed bg-gray-950/50 border border-gray-800/60 p-2.5 rounded-lg" id="focus-biz">
+                            -
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 p-2.5 bg-blue-950/20 border border-blue-900/30 rounded-lg text-[11px] text-blue-300 flex items-center gap-2 shrink-0">
+                <span>ℹ️</span>
+                <span>当前视图已锁定全球地理经纬度边界 [-180° 至 +180°]，禁止视窗无限循环重叠。</span>
+            </div>
+        </section>
+    </main>
+
+    <!-- BOTTOM PANEL: TECH KNOWLEDGEBASE / 底部：冷/暖季型草种核心管养数据库 -->
+    <footer class="p-4 bg-gray-900/40 border-t border-gray-800 shrink-0">
+        <h3 class="text-xs font-semibold text-emerald-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+            📊 基础物料模型：冷/暖季型草种核心管养逻辑
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div class="bg-gray-900/80 border border-gray-800 p-3 rounded-xl">
+                <span class="font-bold text-blue-400 flex items-center gap-1.5 mb-1">❄️ 冷季型草种 (Cool-Season)</span>
+                <p class="text-slate-400 leading-relaxed">代表为草地早熟禾、高羊茅。极其耐寒，主攻欧美高纬度及冷凉地区（如加拿大、英国、德国、新西兰南岛）。生长爆发期对自动化频繁修剪及高剪（3.5-5.0cm）需求明确。</p>
+            </div>
+            <div class="bg-gray-900/80 border border-gray-800 p-3 rounded-xl">
+                <span class="font-bold text-amber-400 flex items-center gap-1.5 mb-1">☀️ 暖季型草种 (Warm-Season)</span>
+                <p class="text-slate-400 leading-relaxed">代表为百慕大草、结缕草（高丽草）。高度耐热耐旱，主攻美南、澳洲大部、日韩平原。夏季生长迅猛，支持高频甚至每日密集低剪（1.5-3.0cm），能够形成极具质感的地毯状草坪。</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MAP ENGINE CORE LOGIC / 核心交互脚本 -->
+    <script>
+        // 全球9大战略市场深度结构化数据库（含具体细分州/地区及精准不重复坐标）
+        const marketData = {
+            usa: {
+                name: '美国 (USA)',
+                status: '🎯 核心超大型战略市场',
+                coords: [38.5, -98.0],
+                zoom: 4,
+                regions: '北部与中部带（华盛顿州、纽约州、俄亥俄州、伊利诺伊州）；南部与西海岸（德克萨斯州、佛罗里达州、加利福尼亚州）。',
+                summary: '全球商业草坪体量之王，私家庭院与高尔夫产业高度成熟。',
+                turf: '地理过渡带鲜明。以五大湖及纽约州为首的北部广袤区域由冷季型（早熟禾、高羊茅）统治；而在德州、佛州等南方热带气候带，百慕大草和圣奥古斯丁草则是绝对主流。',
+                biz: '高端住宅群、大型高尔夫球场及市政公园密集。劳动力成本高昂，是全功能、大坪效商用和家用智能割草机器人最核心的吞吐市场。'
+            },
+            germany: {
+                name: '德国 (Germany)',
+                status: '🇪🇺 欧洲第一大主力市场',
+                coords: [51.16, 10.45],
+                zoom: 6,
+                regions: '南部发达工业区（巴伐利亚州、巴登-符腾堡州）；西部及北部带（北莱茵-威斯特法伦州、下萨克森州）。',
+                summary: '环保意识极强，欧洲足球运动和高品质住宅绿化核心区。',
+                turf: '受典型温带海洋性向大陆性过渡气候影响，100%为冷季型草种。主要分布为多年生黑麦草（Ryegrass）、草地早熟禾，在巴伐利亚等南部山区混有高羊茅。',
+                biz: '作为低噪音和低碳排放政策最严苛的国家，对锂电、静音级自动割草机（尤其是无需边界线的 RTK 导航割草机器人）有着天然的极高接受度。'
+            },
+            uk: {
+                name: '英国 (United Kingdom)',
+                status: '🇬🇧 传统高奢草坪示范市场',
+                coords: [54.5, -3.4],
+                zoom: 6,
+                regions: '核心经济圈（英格兰南部、大伦敦地区、中部的西米德兰兹）；苏格兰低地与威尔士南部。',
+                summary: '草坪文化的鼻祖地，终年温润多雨，草坪全年生长。',
+                turf: '常年高湿度弱日照，孕育了极具英式特色的细腻冷季型草。以匍匐剪股颖（Bentgrass）和细叶羊茅（Fine Fescue）为主，质地极为柔软致密。',
+                biz: '降雨频繁导致割草周期极长，人工维护极其不便。市场迫切需要具备高防水级别、全天候雨中作业能力的智能机械化管养方案。'
+            },
+            switzerland: {
+                name: '瑞士 (Switzerland)',
+                status: '🇨🇭 顶级高富裕度地标市场',
+                coords: [46.8, 8.2],
+                zoom: 7,
+                regions: '中部高原核心商业区（苏黎世州、伯尔尼州、日内瓦州）；阿尔卑斯山脉高山度假区（瓦莱州、格劳宾登州）。',
+                summary: '全球购买力顶峰，地形极其复杂，高端山地维护需求迫切。',
+                turf: '高原及山地温带气候，全境皆为冷季型草种。中部平原地带以早熟禾为主，山地及高端度假村则大面积采用具有极强抗逆性的耐寒混播羊茅。',
+                biz: '别墅庭院及高端酒店多依山而建。地形坡度大、落差高，能完美解决“45°以上高坡度安全巡航、复杂死角防跌落”的割草机器人在此拥有绝对溢价权。'
+            },
+            canada: {
+                name: '加拿大 (Canada)',
+                status: '🚀 极高潜力严寒区市场',
+                coords: [55.0, -110.0],
+                zoom: 4,
+                regions: '三大核心商业人口带（安大略省南部、魁北克省南部、不列颠哥伦比亚省温哥华都会区、阿尔伯塔省）。',
+                summary: '大面积商业与市政绿化并重，夏季返青期草坪生长爆发性极强。',
+                turf: '受高纬度极寒气候制约，全境属于冷季型草种。以超强耐寒的匍匐剪股颖、细羊茅和加拿大蓝草（Bluegrass）为主。',
+                biz: '极寒导致草坪维护期集中在短短5-9月，期间生长速率极快，人工短缺问题严重。市政绿化和企业园区对于大坪效、自主避障的割草设备属于刚性替代。'
+            },
+            australia: {
+                name: '澳大利亚 (Australia)',
+                status: '💎 南半球最高价值干旱市场',
+                coords: [-25.0, 134.0],
+                zoom: 4,
+                regions: '东南沿海商业带（新南威尔士州悉尼、维多利亚州墨尔本）；阳光热带区（昆士兰州布里斯班、西澳大利亚州珀斯）。',
+                summary: '气候极端干旱、水资源匮乏，对节水型草种与高精准养护要求极高。',
+                turf: '两极分化。在悉尼、墨尔本等温带区兼具冷季黑麦草与暖季型；而昆士兰及西澳等干旱炎热地带，全面统治着高耐旱的暖季型水牛草（Buffalo）和百慕大。',
+                biz: '当地常年受限水令约束。集成“土壤多点湿度感知、多频微切精准控草、避免过度蒸腾”的超智能管养硬件具有极大的科技壁垒优势。'
+            },
+            japan: {
+                name: '日本 (Japan)',
+                status: '📈 高度老龄化刚需替代市场',
+                coords: [36.5, 138.0],
+                zoom: 6,
+                regions: '核心关东与关西平原（东京都、神奈川县、大阪府）；南部岛屿（九州、冲绳）；北部冷凉带（北海道）。',
+                summary: '老牌园林精细化管理国，劳动力断层极其严重。',
+                turf: '北海道及东北高寒带为冷季型草；而本州中部以南的大平原则被日本本土特产的暖季型“野芝/结缕草（Zoysia）”绝对统治。',
+                biz: '由于人口老龄化，传统人工绿化难以维持，大面积高速路绿化带、大型高尔夫球场及度假村，迫切需要引入商用无人化集中管理机队。'
+            },
+            southkorea: {
+                name: '韩国 (South Korea)',
+                status: '⭐ 高精细度体育标杆市场',
+                coords: [36.2, 127.8],
+                zoom: 7,
+                regions: '首都圈核心经济带（京畿道、首尔特别市）；高端体育高尔夫密集区（江原道、济州岛）。',
+                summary: '高尔夫与豪宅经济高度发达，草坪毫米级平整度要求极为严苛。',
+                turf: '公共和高档住宅绿化大面积铺设本地暖季型高丽草（结缕草类）；但在其最为核心的高尔夫球场果岭（Green）则100%依赖高档冷季型剪股颖。',
+                biz: '高尔夫产业在韩国消费极高。对于高尔夫果岭所需的“夜间全静音、毫米级超低草皮割幅、回字形完美草纹压条”等极致工艺具有明确的商业切入点。'
+            },
+            newzealand: {
+                name: '新西兰 (New Zealand)',
+                status: '🇳🇿 极致生态纯净庄园市场',
+                coords: [-40.9, 174.8],
+                zoom: 6,
+                regions: '北岛核心商业区（奥克兰、怀卡托）；南岛高端庄园与高尔夫带（坎特伯雷、奥塔哥/皇后镇）。',
+                summary: '人均草坪面积位居世界前列，高度注重生态环保与庄园式低碳管理。',
+                turf: '整体气候温和湿润。北岛相对温暖，以冷季型黑麦草为主并有暖季型过渡；南岛皇后镇及基督城则由于寒冷，全面种植高档冷季型匍匐剪股颖和褐顶颖。',
+                biz: '私人超大庄园、高端生态度假村和国际顶级高尔夫球场密集。本地对燃油动力废气极度反感，对零排放、超长续航的纯电新能源智能割草设备极其青睐。'
+            }
+        };
+
+        // 1. 初始化标准平面地图 
+        // 🌟 通过 maxBounds 和 maxBoundsViscosity 物理锁定边界，防止世界无限环绕和复制
+        const worldBounds = L.latLngBounds(L.latLng(-85, -180), L.latLng(85, 180));
+        
+        const map = L.map('map', {
+            center: [30, 0],
+            zoom: 2,
+            minZoom: 2,
+            maxZoom: 9,
+            zoomControl: true,
+            attributionControl: false,
+            maxBounds: worldBounds,          // 限制拖拽不能超出这个世界范围
+            maxBoundsViscosity: 1.0          // 1.0 代表边界完全像一堵墙，拉不动，彻底解决重复问题
+        });
+
+        // 2. 加载黑暗高对比度图层 
+        // 🌟 核心：设置 noWrap: true 和 bounds，让底图瓦片在全球边缘处直接切断，绝不复制北美/亚洲
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            subdomains: 'abcd',
+            maxZoom: 20,
+            noWrap: true,                    // 瓦片层不进行水平复制包裹
+            bounds: worldBounds              // 限制瓦片渲染边界
+        }).addTo(map);
+
+        const marketMarkers = {};
+        const marketListContainer = document.getElementById('market-list');
+        
+        // 3. 动态渲染左侧列表与不重复物理锚点
+        Object.keys(marketData).forEach(key => {
+            const data = marketData[key];
+            
+            // A. 渲染左侧控制卡片
+            const card = document.createElement('div');
+            card.id = `btn-${key}`;
+            card.className = "p-3 bg-gray-950/40 border border-gray-800 rounded-lg cursor-pointer hover:border-cyan-500/50 hover:bg-gray-900 transition-all duration-150 group";
+            card.onclick = () => focusMarket(key);
+            card.innerHTML = `
+                <div class="flex justify-between items-center mb-0.5">
+                    <span class="font-bold text-slate-200 text-xs group-hover:text-cyan-400 transition-colors">${data.name}</span>
+                    <span class="text-[9px] font-mono text-slate-500 group-hover:text-slate-400">LOCATE ➔</span>
+                </div>
+                <p class="text-[11px] text-slate-400 line-clamp-1 leading-relaxed">${data.summary}</p>
+            `;
+            marketListContainer.appendChild(card);
+
+            // B. 地图标准雷达锚点
+            const customIcon = L.divIcon({
+                className: 'pulse-marker-target',
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+
+            // C. 绑定地图标记与详细信息气泡
+            const marker = L.marker(data.coords, { icon: customIcon }).addTo(map);
+            marker.bindPopup(`
+                <div style="font-family: sans-serif; width: 180px;">
+                    <h3 style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold; color: #3b82f6;">${data.name}</h3>
+                    <p style="margin: 0; font-size: 11px; color: #94a3b8; line-height: 1.3;">已成功锁定唯一地理空间坐标</p>
+                </div>
+            `);
+            
+            marketMarkers[key] = marker;
+        });
+
+        // 4. 核心联动交互控制中心
+        function focusMarket(marketKey) {
+            const data = marketData[marketKey];
+            if (!data) return;
+
+            // 地图平滑飞行定位
+            map.flyTo(data.coords, data.zoom, {
+                animate: true,
+                duration: 1.2
+            });
+
+            // 自动激活对应地图锚点的气泡弹窗
+            marketMarkers[marketKey].openPopup();
+
+            // 高亮左侧对应选中的卡片
+            Object.keys(marketData).forEach(k => {
+                const el = document.getElementById(`btn-${k}`);
+                if (k === marketKey) {
+                    el.classList.add('border-cyan-500/80', 'bg-slate-900/80');
+                    el.classList.remove('border-gray-800', 'bg-gray-950/40');
+                } else {
+                    el.classList.remove('border-cyan-500/80', 'bg-slate-900/80');
+                    el.classList.add('border-gray-800', 'bg-gray-950/40');
+                }
+            });
+
+            // 联动刷新右侧终端精细化文本
+            document.getElementById('focus-title').innerText = data.name;
+            document.getElementById('focus-status').innerText = data.status;
+            document.getElementById('focus-regions').innerText = data.regions; // 🌟 新增细分州/地区刷新
+            document.getElementById('focus-turf').innerText = data.turf;
+            document.getElementById('focus-biz').innerText = data.biz;
+        }
+
+        // 5. 初始化加载逻辑：系统默认高亮并定位至美国
+        window.onload = () => {
+            focusMarket('usa');
+            
+            // 系统右上角动态时间
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('digital-clock').innerText = 'UTC ' + now.toISOString().replace('T', ' ').substring(0, 19);
+            }, 1000);
+        };
+    </script>
+</body>
+</html>
